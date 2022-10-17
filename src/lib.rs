@@ -1,10 +1,12 @@
 pub use cidr::Cidr;
 pub use network::Network;
 pub use network_error::NetworkError;
+pub use subnet::Subnet;
 
 mod cidr;
 mod network;
 mod network_error;
+mod subnet;
 
 #[cfg(test)]
 mod tests {
@@ -689,5 +691,82 @@ mod tests {
             network.broadcast_address(),
             Some(Ipv4Addr::new(10, 55, 8, 13))
         );
+    }
+    #[test]
+    fn create_subnet() {
+        let ip_address = Ipv4Addr::new(145, 52, 12, 8);
+        let cidr = Cidr::new(24).unwrap();
+        let network = Network::new(ip_address, cidr).unwrap();
+        let subnet_cidr = Cidr::new(26).unwrap();
+        let subnet = network.create_subnet(subnet_cidr).unwrap();
+        let got_base_network_id = subnet.base_network().network_id();
+        let want_base_network_id = Ipv4Addr::new(145, 52, 12, 0);
+        let want_subnets = vec![
+            Network::new(Ipv4Addr::new(145, 52, 12, 0), Cidr::new(26).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(145, 52, 12, 64), Cidr::new(26).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(145, 52, 12, 128), Cidr::new(26).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(145, 52, 12, 192), Cidr::new(26).unwrap()).unwrap(),
+        ];
+        let got_subnets = subnet.subnets();
+        assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(*got_subnets, want_subnets);
+
+        let ip_address = Ipv4Addr::new(253, 65, 181, 18);
+        let cidr = Cidr::new(25).unwrap();
+        let network = Network::new(ip_address, cidr).unwrap();
+        let subnet_cidr = Cidr::new(25).unwrap();
+        let subnet = network.create_subnet(subnet_cidr).unwrap();
+        let got_base_network_id = subnet.base_network().network_id();
+        let want_base_network_id = Ipv4Addr::new(253, 65, 181, 0);
+        let want_subnets =
+            vec![Network::new(Ipv4Addr::new(253, 65, 181, 18), Cidr::new(25).unwrap()).unwrap()];
+        let got_subnets = subnet.subnets();
+        assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(*got_subnets, want_subnets);
+
+        let ip_address = Ipv4Addr::new(1, 255, 255, 8);
+        let cidr = Cidr::new(14).unwrap();
+        let network = Network::new(ip_address, cidr).unwrap();
+        let subnet_cidr = Cidr::new(18).unwrap();
+        let subnet = network.create_subnet(subnet_cidr).unwrap();
+        let got_base_network_id = subnet.base_network().network_id();
+        let want_base_network_id = Ipv4Addr::new(1, 252, 0, 0);
+        let want_subnets = vec![
+            Network::new(Ipv4Addr::new(1, 252, 0, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 252, 64, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 252, 128, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 252, 192, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 253, 0, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 253, 64, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 253, 128, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 253, 192, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 254, 0, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 254, 64, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 254, 128, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 254, 192, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 255, 0, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 255, 64, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 255, 128, 0), Cidr::new(18).unwrap()).unwrap(),
+            Network::new(Ipv4Addr::new(1, 255, 192, 0), Cidr::new(18).unwrap()).unwrap(),
+        ];
+        let got_subnets = subnet.subnets();
+        assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(*got_subnets, want_subnets);
+
+        let ip_address = Ipv4Addr::new(145, 52, 12, 8);
+        let cidr = Cidr::new(16).unwrap();
+        let network = Network::new(ip_address, cidr).unwrap();
+        let subnet_cidr = Cidr::new(15).unwrap();
+        let subnet = network.create_subnet(subnet_cidr);
+        let subnet_error = subnet.unwrap_err();
+        assert_eq!(subnet_error, NetworkError::InvalidSubnetCidr);
+
+        let ip_address = Ipv4Addr::new(145, 52, 12, 8);
+        let cidr = Cidr::new(32).unwrap();
+        let network = Network::new(ip_address, cidr).unwrap();
+        let subnet_cidr = Cidr::new(0).unwrap();
+        let subnet = network.create_subnet(subnet_cidr);
+        let subnet_error = subnet.unwrap_err();
+        assert_eq!(subnet_error, NetworkError::InvalidSubnetCidr);
     }
 }
