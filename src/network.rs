@@ -3,8 +3,8 @@
 /// Utility for working calculating network subnets.
 use std::net::Ipv4Addr;
 
+use crate::Cidr;
 use crate::NetworkError;
-use crate::{Cidr, Subnet};
 
 /// Represents a IPv4 Network by storing it's Network address and CIDR value.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -75,11 +75,6 @@ impl Network {
             return 2;
         }
         2_u32.pow(32 - *self.cidr as u32) - 2
-    }
-
-    /// Using the given Cidr value, split the network into subnets and return a Vector of the subnet networks.
-    pub fn create_subnet(&self, cidr: Cidr) -> Result<Subnet, NetworkError> {
-        Subnet::new(self.clone(), cidr)
     }
 }
 

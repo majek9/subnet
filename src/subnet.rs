@@ -8,53 +8,51 @@ use crate::{Cidr, Network, NetworkError};
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 pub struct Subnet {
     base_network: Network,
-    subnetworks: Vec<Network>,
+    cidr: Cidr,
+    number_of_subnet_bits: u8,
+    length: u32,
+    current_subnet: u32,
 }
 
 impl Subnet {
     /// Create and initialise a new Subnet struct. Takes a network and a new CIDR value. Return a Vector of the subnet networks.
-    pub(crate) fn new(base_network: Network, cidr: Cidr) -> Result<Self, NetworkError> {
+    pub fn new(base_network: Network, cidr: Cidr) -> Result<Self, NetworkError> {
         if base_network.cidr() > cidr {
             return Err(NetworkError::InvalidSubnetCidr);
         }
 
-        let subnetworks = Self::calculate_subnetworks(&base_network, cidr);
+        let number_of_subnet_bits = *cidr - *base_network.cidr();
+        let length = 2u32.pow(number_of_subnet_bits as u32);
 
-        let subnet = Self {
+        Ok(Self {
             base_network,
-            subnetworks,
-        };
-
-        Ok(subnet)
+            cidr,
+            number_of_subnet_bits,
+            length,
+            current_subnet: 0,
+        })
     }
 
     /// Return the base network from the Subnet.
     pub fn base_network(&self) -> &Network {
         &self.base_network
     }
+}
 
-    /// Return the subnets in the network.
-    pub fn subnets(&self) -> &Vec<Network> {
-        &self.subnetworks
-    }
+impl Iterator for Subnet {
+    type Item = Network;
 
-    /// Calculate and return the subnet networks.
-    fn calculate_subnetworks(base_network: &Network, cidr: Cidr) -> Vec<Network> {
-        let number_of_subnet_bits = *cidr - *base_network.cidr();
-        let number_of_subnets = 2u32.pow(number_of_subnet_bits as u32);
-
-        let mut subnetworks = Vec::with_capacity(number_of_subnets as usize);
-
-        let network_u32 = u32::from(base_network.network_id());
-
-        for subnet_network in 0..number_of_subnets {
-            let subnet_network_u32 = network_u32
-                + (subnet_network << (32 - *base_network.cidr() - number_of_subnet_bits));
-
-            let network = Ipv4Addr::from(subnet_network_u32);
-            subnetworks.push(Network::new(network, cidr).unwrap());
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_subnet >= self.length {
+            return None;
         }
 
-        subnetworks
+        let subnet_network_u32 = u32::from(self.base_network.network_id())
+            + (self.current_subnet
+                << (32 - *self.base_network.cidr() - self.number_of_subnet_bits));
+
+        self.current_subnet += 1;
+
+        Network::new(Ipv4Addr::from(subnet_network_u32), self.cidr).ok()
     }
 }
