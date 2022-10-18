@@ -7,7 +7,7 @@ use crate::Cidr;
 use crate::NetworkError;
 
 /// Represents a IPv4 Network by storing it's Network address and CIDR value.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Network {
     network_id: Ipv4Addr,
     cidr: Cidr,

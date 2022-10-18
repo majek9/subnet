@@ -5,7 +5,7 @@ use std::net::Ipv4Addr;
 use crate::{Cidr, Network, NetworkError};
 
 ///Represents a network address by storing it's network address and CIDR value.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Subnet {
     base_network: Network,
     cidr: Cidr,
@@ -36,6 +36,11 @@ impl Subnet {
     /// Return the base network from the Subnet.
     pub fn base_network(&self) -> &Network {
         &self.base_network
+    }
+
+    /// Return the cidr being applied to the base network.
+    pub fn cidr(&self) -> Cidr {
+        self.cidr
     }
 }
 

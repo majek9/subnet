@@ -702,6 +702,7 @@ mod tests {
         let subnet_cidr = Cidr::new(26).unwrap();
         let subnet = Subnet::new(network, subnet_cidr).unwrap();
         let got_base_network_id = subnet.base_network().network_id();
+        let got_cidr = subnet.cidr();
         let want_base_network_id = Ipv4Addr::new(145, 52, 12, 0);
         let want_subnets = vec![
             Network::new(Ipv4Addr::new(145, 52, 12, 0), Cidr::new(26).unwrap()).unwrap(),
@@ -711,6 +712,7 @@ mod tests {
         ];
         let got_subnets: Vec<Network> = subnet.collect();
         assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(got_cidr, subnet_cidr);
         assert_eq!(*got_subnets, want_subnets);
 
         let ip_address = Ipv4Addr::new(253, 65, 181, 18);
@@ -720,10 +722,12 @@ mod tests {
         let subnet = Subnet::new(network, subnet_cidr).unwrap();
         let got_base_network_id = subnet.base_network().network_id();
         let want_base_network_id = Ipv4Addr::new(253, 65, 181, 0);
+        let got_cidr = subnet.cidr();
         let want_subnets =
             vec![Network::new(Ipv4Addr::new(253, 65, 181, 18), Cidr::new(25).unwrap()).unwrap()];
         let got_subnets: Vec<Network> = subnet.collect();
         assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(got_cidr, subnet_cidr);
         assert_eq!(*got_subnets, want_subnets);
 
         let ip_address = Ipv4Addr::new(1, 255, 255, 8);
@@ -733,6 +737,7 @@ mod tests {
         let subnet = Subnet::new(network, subnet_cidr).unwrap();
         let got_base_network_id = subnet.base_network().network_id();
         let want_base_network_id = Ipv4Addr::new(1, 252, 0, 0);
+        let got_cidr = subnet.cidr();
         let want_subnets = vec![
             Network::new(Ipv4Addr::new(1, 252, 0, 0), Cidr::new(18).unwrap()).unwrap(),
             Network::new(Ipv4Addr::new(1, 252, 64, 0), Cidr::new(18).unwrap()).unwrap(),
@@ -753,6 +758,7 @@ mod tests {
         ];
         let got_subnets: Vec<Network> = subnet.collect();
         assert_eq!(got_base_network_id, want_base_network_id);
+        assert_eq!(got_cidr, subnet_cidr);
         assert_eq!(*got_subnets, want_subnets);
 
         let ip_address = Ipv4Addr::new(145, 52, 12, 8);
