@@ -1,0 +1,8 @@
+image:
+  file: .gitpod.Dockerfile
+
+jetbrains:
+  plugins:
+    - org.toml.lang
+    - org.rust.lang
+
