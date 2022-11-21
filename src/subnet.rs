@@ -16,8 +16,8 @@ pub struct Slsm {
 }
 
 impl Slsm {
-    /// Create and initialise a new Subnet struct. Takes a network and a new CIDR value.
-    /// Return an iterator over the resulting subnets.
+    /// Create and initialise a new Slsm struct. Takes a network and a new CIDR value.
+    /// Return an iterator over the resulting slsm subnets.
     pub fn new(base_network: Network, cidr: Cidr) -> Result<Self, NetworkError> {
         if base_network.cidr() > cidr {
             return Err(NetworkError::InvalidSubnetCidr);
@@ -64,7 +64,7 @@ impl Iterator for Slsm {
     }
 }
 
-///Partitions a Network into subnets by using a Variable Length Subnet Mask
+///Partitions a Network into subnets by using a Variable Length Subnet Mask.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Vlsm {
     base_network: Network,
@@ -74,9 +74,9 @@ pub struct Vlsm {
 }
 
 impl Vlsm {
-    /// Create and initialise a new Subnet struct. Takes a network and list of CIDR values.
-    /// Return an iterator over the resulting subnets. The iterator will return the subnets in the order of greatest nuymber of hosts to the smallest.
-    /// If will stop returning Networks when it reached the end of the required number of hosts, or it fdoes not have enough ip addresses to allocate the next subnet.
+    /// Create and initialise a new Vlsm struct. Takes a network and list of required hosts numbers per subnet.
+    /// Return an iterator over the resulting subnets. The iterator will return the subnets in the order of greatest number of hosts to the smallest.
+    /// It will stop returning Networks when it reaches the end of the required number of hosts, or it does not have enough ip addresses to allocate the next subnet.
     pub fn new(base_network: Network, required_hosts: Vec<u32>) -> Result<Self, NetworkError> {
         let mut required_hosts = required_hosts;
         required_hosts.sort_by_key(|c| Reverse(*c));
@@ -96,6 +96,7 @@ impl Vlsm {
         &self.base_network
     }
 
+    /// Returns the required Cidr to accommodate the required number of hosts.
     fn required_cidr_for_host_count(hosts: u32) -> Result<Cidr, NetworkError> {
         let required_cidr = 32 - (((hosts+2) as f32).log2().ceil()) as u8;
         Cidr::new(required_cidr)
@@ -110,7 +111,7 @@ impl Iterator for Vlsm {
             return None;
         }
 
-        // If we have left the range of the base network, return stop iterating.
+        // If we have left the range of the base network, stop iterating.
         if u32::from(self.next_network_id) >= u32::from(self.base_network.broadcast_address()?) {
             return None;
         }
