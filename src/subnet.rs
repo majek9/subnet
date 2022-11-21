@@ -1,12 +1,13 @@
 #![warn(missing_docs)]
 
+use std::cmp::Reverse;
 use std::net::Ipv4Addr;
 
 use crate::{Cidr, Network, NetworkError};
 
-///Represents a network address by storing it's network address and CIDR value.
+///Partitions a Network into subnets by using a Single Length Subnet Mask
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Subnet {
+pub struct Slsm {
     base_network: Network,
     cidr: Cidr,
     number_of_subnet_bits: u8,
@@ -14,8 +15,9 @@ pub struct Subnet {
     current_subnet: u32,
 }
 
-impl Subnet {
-    /// Create and initialise a new Subnet struct. Takes a network and a new CIDR value. Return a Vector of the subnet networks.
+impl Slsm {
+    /// Create and initialise a new Subnet struct. Takes a network and a new CIDR value.
+    /// Return an iterator over the resulting subnets.
     pub fn new(base_network: Network, cidr: Cidr) -> Result<Self, NetworkError> {
         if base_network.cidr() > cidr {
             return Err(NetworkError::InvalidSubnetCidr);
@@ -44,7 +46,7 @@ impl Subnet {
     }
 }
 
-impl Iterator for Subnet {
+impl Iterator for Slsm {
     type Item = Network;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -59,5 +61,78 @@ impl Iterator for Subnet {
         self.current_subnet += 1;
 
         Network::new(Ipv4Addr::from(subnet_network_u32), self.cidr).ok()
+    }
+}
+
+///Partitions a Network into subnets by using a Variable Length Subnet Mask
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Vlsm {
+    base_network: Network,
+    required_hosts: Vec<u32>,
+    current_subnet: usize,
+    next_network_id: Ipv4Addr,
+}
+
+impl Vlsm {
+    /// Create and initialise a new Subnet struct. Takes a network and list of CIDR values.
+    /// Return an iterator over the resulting subnets. The iterator will return the subnets in the order of greatest nuymber of hosts to the smallest.
+    /// If will stop returning Networks when it reached the end of the required number of hosts, or it fdoes not have enough ip addresses to allocate the next subnet.
+    pub fn new(base_network: Network, required_hosts: Vec<u32>) -> Result<Self, NetworkError> {
+        let mut required_hosts = required_hosts;
+        required_hosts.sort_by_key(|c| Reverse(*c));
+
+        let next_network_id = base_network.network_id();
+
+        Ok(Self {
+            base_network,
+            required_hosts,
+            current_subnet: 0,
+            next_network_id,
+        })
+    }
+
+    /// Return the base network from the Subnet.
+    pub fn base_network(&self) -> &Network {
+        &self.base_network
+    }
+
+    fn required_cidr_for_host_count(hosts: u32) -> Result<Cidr, NetworkError> {
+        let required_cidr = 32 - (((hosts+2) as f32).log2().ceil()) as u8;
+        Cidr::new(required_cidr)
+    }
+}
+
+impl Iterator for Vlsm {
+    type Item = Network;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_subnet >= self.required_hosts.len() {
+            return None;
+        }
+
+        // If we have left the range of the base network, return stop iterating.
+        if u32::from(self.next_network_id) >= u32::from(self.base_network.broadcast_address()?) {
+            return None;
+        }
+
+        let required_cidr =
+            Vlsm::required_cidr_for_host_count(self.required_hosts[self.current_subnet as usize])
+                .ok()?;
+
+        // If this overflows then the required number of hosts will not fit in the available space.
+        let number_of_subnet_bits = required_cidr.checked_sub( *self.base_network.cidr())?;
+
+        //The next network to bbe returned from the iterator
+        let result = Network::new(self.next_network_id, required_cidr).ok();
+
+
+        //Calculate the next network id.
+        let subnet_network_u32 = u32::from(self.next_network_id)
+            + (1 << (32 - *self.base_network.cidr() - number_of_subnet_bits ));
+        self.next_network_id = Ipv4Addr::from(subnet_network_u32);
+
+        self.current_subnet += 1;
+
+        result
     }
 }
